@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    environment {
+        // Docker Hub credentials stored in Jenkins Credentials (ID: dockerhub-credentials)
+        DOCKER_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKER_REPO = "projectaws741/ktd_l2_test"   // change to your Docker Hub repo
+        IMAGE_TAG = "latest"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/projectaws741/Ktd_L2_Test.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh """
+                        echo "Building Docker image..."
+                        docker build -t ${DOCKER_REPO}:${IMAGE_TAG} .
+                    """
+                }
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                script {
+                    sh """
+                        echo "Logging into Docker Hub..."
+                        echo "${DOCKER_CREDENTIALS_PSW}" | docker login -u "${DOCKER_CREDENTIALS_USR}" --password-stdin
+                    """
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    sh """
+                        echo "Pushing image to Docker Hub..."
+                        docker push ${DOCKER_REPO}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Continuous Deployment (CD)') {
+            steps {
+                script {
+                    echo "Deploying new image..."
+                    // Example: pull latest image and restart container
+                    sh """
+                        docker pull ${DOCKER_REPO}:${IMAGE_TAG}
+                        docker rm -f oracle-etl || true
+                        docker run -d --name oracle-etl ${DOCKER_REPO}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Cleaning up workspace..."
+            cleanWs()
+        }
+    }
+}
