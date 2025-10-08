@@ -2,10 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Docker Hub credentials stored in Jenkins Credentials (ID: dockerhub-credentials)
-        DOCKER_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_REPO = "projectaws741/ktd_l2_test"   // change to your Docker Hub repo
-        IMAGE_TAG = "latest"
+        DOCKER_CREDENTIALS = credentials('dockerhub-credentials')  // Jenkins credentials ID
+        DOCKER_REPO = "projectaws741/ktd_l2_test"  // Your DockerHub repo
+        IMAGE_TAG = "v1.0"   // Change as per release version
     }
 
     stages {
@@ -17,46 +16,29 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh """
-                        echo "Building Docker image..."
-                        docker build -t ${DOCKER_REPO}:${IMAGE_TAG} .
-                    """
-                }
+                sh "docker build -t ${DOCKER_REPO}:${IMAGE_TAG} ."
             }
         }
 
         stage('Docker Login') {
             steps {
-                script {
-                    sh """
-                        echo "Logging into Docker Hub..."
-                        echo "${DOCKER_CREDENTIALS_PSW}" | docker login -u "${DOCKER_CREDENTIALS_USR}" --password-stdin
-                    """
-                }
+                sh "echo ${DOCKER_CREDENTIALS_PSW} | docker login -u ${DOCKER_CREDENTIALS_USR} --password-stdin"
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Push Docker Image') {
             steps {
-                script {
-                    sh """
-                        echo "Pushing image to Docker Hub..."
-                        docker push ${DOCKER_REPO}:${IMAGE_TAG}
-                    """
-                }
+                sh "docker push ${DOCKER_REPO}:${IMAGE_TAG}"
             }
         }
 
-        stage('Continuous Deployment (CD)') {
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    echo "Deploying new image..."
-                    // Example: pull latest image and restart container
+                    // Apply CronJob manifest
                     sh """
-                        docker pull ${DOCKER_REPO}:${IMAGE_TAG}
-                        docker rm -f oracle-etl || true
-                        docker run -d --name oracle-etl ${DOCKER_REPO}:${IMAGE_TAG}
+                    kubectl delete cronjob oracle-etl-job --ignore-not-found=true
+                    kubectl apply -f k8s-cronjob.yaml
                     """
                 }
             }
@@ -65,7 +47,6 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning up workspace..."
             cleanWs()
         }
     }
