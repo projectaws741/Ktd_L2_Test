@@ -18,4 +18,4 @@ Here I am assuming that Jenkins and Kubernetes are running on the same server.
 In real-world scenarios, Jenkins and Kubernetes typically run on different servers. In that case, I would build another pipeline for deployment that uses a .kubeconfig file to establish a secure connection between Jenkins and the Kubernetes cluster.
 K8s-CronJob.yaml
 	•	I am using a Kubernetes CronJob object because the container needs to run at a specific time.
-	•	The CronJob is scheduled to run every day at 12 AM ET.
+	•	The CronJob is scheduled to run every day at 12 AM ET (Assuming timings are in ET)
