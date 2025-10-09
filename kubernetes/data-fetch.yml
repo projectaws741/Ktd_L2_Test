@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-fetch
+  namespace: tdk-devops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-fetch
+  template:
+    metadata:
+      labels:
+        app: data-fetch
+    spec:
+      containers:
+      - name: data-fetch
+        image: projectaws/data-fetch:latest
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - secretRef:
+            name: oracle-secret
+        volumeMounts:
+        - name: data-storage
+          mountPath: /data
+      volumes:
+      - name: data-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-fetch
+  namespace: tdk-devops
+spec:
+  selector:
+    app: data-fetch
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP
