@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: oracle-pvc
+  namespace: tdk-devops
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oracle-db
+  namespace: tdk-devops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle-db
+  template:
+    metadata:
+      labels:
+        app: oracle-db
+    spec:
+      containers:
+      - name: oracle-db
+        image: gvenzl/oracle-xe:21-slim
+        env:
+        - name: ORACLE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: oracle-secret
+              key: ORACLE_PASSWORD
+        ports:
+        - containerPort: 1521
+        volumeMounts:
+        - name: oracle-storage
+          mountPath: /opt/oracle/oradata
+      volumes:
+      - name: oracle-storage
+        persistentVolumeClaim:
+          claimName: oracle-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle-db
+  namespace: tdk-devops
+spec:
+  selector:
+    app: oracle-db
+  ports:
+  - port: 1521
+    targetPort: 1521
+  type: ClusterIP
