@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle-db
+    environment:
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - APP_USER=${ORACLE_USER}
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "pgrep", "tnslsnr"]
+      interval: 15s
+      retries: 10
+
+  data_ingest_service:
+    build: ./data_ingest_service
+    container_name: data_ingest_service
+    env_file: .env
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    ports:
+      - "5001:5000"
+
+  data_fetch_service:
+    build: ./data_fetch_service
+    container_name: data_fetch_service
+    env_file: .env
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    volumes:
+      - ./data:/data
+    ports:
+      - "5002:5000"
+
+  scheduler_service:
+    build: ./scheduler_service
+    container_name: scheduler_service
+    env_file: .env
+    depends_on:
+      - data_ingest_service
+      - data_fetch_service
+
+volumes:
+  oracle_data:
