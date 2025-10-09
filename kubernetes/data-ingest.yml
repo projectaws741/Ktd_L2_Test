@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-ingest
+  namespace: tdk-devops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-ingest
+  template:
+    metadata:
+      labels:
+        app: data-ingest
+    spec:
+      containers:
+      - name: data-ingest
+        image: projectaws/data-ingest:latest
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - secretRef:
+            name: oracle-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-ingest
+  namespace: tdk-devops
+spec:
+  selector:
+    app: data-ingest
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP
