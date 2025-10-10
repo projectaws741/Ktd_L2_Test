@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: data-fetch
-        image: projectaws/data-fetch:latest
+        image: projectaws/data_fetch_service
         ports:
         - containerPort: 5000
         envFrom:
