@@ -1,60 +1,94 @@
-The goal of this project was to automate a data-processing workflow for TDK:
-	•	Insert raw data into an Oracle database.
-	•	Fetch the same data from the database.
-	•	Save it in a TSV (tab-separated) file.
-	•	Schedule this process to run automatically every night at midnight.
+Workflow:
+	1.	Data-Ingest Service → Inserts raw data into Oracle DB.
+	2.	Data-Fetch Service → Fetches data from DB and saves it to output.tsv.
+	3.	Scheduler Service → Triggers the pipeline automatically at 00:00 AM daily.
+	4.	Oracle DB → Stores the persistent data.
 
-The original app.py shared by TDK demonstrated the basic Python logic, but the task required a DevOps-ready implementation — containerized, orchestrated, and automated.
+Run Locally with Docker Compose:
 
-⸻
+Prerequisites
 
-Why I We Used Docker and Docker Compose
+Before you start, ensure you have installed:
+	•	Docker Desktop
+	•	Docker Compose
+Folder Structure:
+Ktd_L2_Test/
+│
+├── docker-compose.yml
+├── .env
+├── data/
+│   └── output.tsv (auto-created)
+│
+├── data_ingest_service/
+│   ├── app.py
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── data_fetch_service/
+│   ├── app.py
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+└── scheduler_service/
+    ├── app.py
+    ├── Dockerfile
+    └── requirements.txt
+Environment Variables
 
-We used Docker to package each service (Python apps and database) with its dependencies.
-This ensures the application runs consistently on any system without manual setup.
+All configuration parameters are managed through the .env file.
 
-Docker Compose was chosen for local orchestration because:
-	•	It allows us to run multiple containers (Oracle DB, ingestion, fetch, and scheduler) together as one environment.
-	•	Each container represents a distinct service but communicates seamlessly through an internal Docker network.
-	•	It’s ideal for local testing before moving to Kubernetes.
-	•	Configuration is simple — a single docker-compose up command brings the entire environment online.
+Example .env:
+# Oracle DB Configuration
+ORACLE_USER=system
+ORACLE_PASSWORD=oracle
+ORACLE_DSN=oracle-db/XEPDB1
 
-In short, Docker Compose acts as a lightweight local cluster, simulating how services will interact later inside Kubernetes.
+# Export Path
+DATA_PATH=/data/output.tsv
 
-⸻
+Steps to Run Locally:
+Step 1: Clone the Repository
+#git clone https://github.com/projectaws741/Ktd_L2_Test.git
+#cd Ktd_L2_Test
 
-Why I Used Kubernetes
+Step 2: Start the Containers
+#docker-compose up -d
+This command will:
+	•	Pull and start Oracle XE DB.
+	•	Build and run three microservices (ingest, fetch, scheduler).
+	•	Create a shared volume for persistent Oracle data.
+	•	Map local folder ./data for storing TSV output.
 
-After validating the setup locally with Docker Compose, we used Kubernetes to deploy the same architecture in a cluster environment.
+Step 3: Verify Running Containers
+#docker ps
+You should see containers:
+oracle-db
+data_ingest_service
+data_fetch_service
+scheduler_service
+#docker container ls
+You should see the containers below.
+<img width="1280" height="186" alt="image" src="https://github.com/user-attachments/assets/fe419719-9761-4c62-bd07-fdf26ed88d9b" />
+Verify Automatic Scheduler:
+The scheduler service runs daily at 00:00 AM local time.
+You can check logs to confirm:
+#docker logs scheduler_service
 
-Kubernetes provides:
-	•	Scalability – each microservice can scale independently based on load.
-	•	Self-healing – pods are restarted automatically if they fail.
-	•	Service discovery – all services communicate internally via ClusterIP networking.
-	•	Persistence – the Oracle DB data is stored using a PersistentVolumeClaim (PVC).
-	•	Configuration management – credentials and connection strings are stored securely as Kubernetes Secrets.
+Clean Up:
+#docker-compose down
+To remove all images and volumes (start clean):
+#docker-compose down -v
 
-This makes the solution production-grade and cloud-ready.
+Moving to Kubernetes:
 
-⸻
+The same architecture can be deployed to Kubernetes using manifests in the kubernetes/ folder.
 
-Why I Created Multiple Microservices Instead of One app.py
+Each service has:
+	•	Deployment – manages pods and replicas
+	•	Service (ClusterIP) – allows internal communication
+	•	Secret – stores credentials securely
+	•	PVC – provides persistent Oracle storage
+To deploy:
+#kubectl apply -f kubernetes/
 
-Although TDK shared a single app.py file, it represented a monolithic design — all logic (insert, fetch, export, schedule) bundled in one process.
 
-In DevOps and cloud-native design, we prefer microservices architecture, where each service performs one clear function and can be deployed, scaled, and maintained independently.
-
-Benefits of this approach:
-	•	Easier debugging and maintenance — one service fails, others still run.
-	•	Better scalability — for example, the data fetch service can scale up without touching the scheduler.
-	•	Improved CI/CD — each container can be built, tested, and deployed independently.
-	•	True orchestration — aligns with the “microservices and orchestration” requirement from the TDK case study.
-
-⸻
-
- End-to-End Workflow:
-	1.	Scheduler triggers the pipeline every night at 00:00 AM.
-	2.	Data-Ingest Service inserts fresh data into Oracle DB.
-	3.	Data-Fetch Service reads data from Oracle DB and saves it to /data/output.tsv.
-	4.	Oracle DB persists all records using a PersistentVolumeClaim, even after container restarts.
-	5.	All services communicate internally using ClusterIP Services in Kubernetes.
