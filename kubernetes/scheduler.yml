@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: scheduler
-        image: projectaws/scheduler:latest
+        image: projectaws/schedule_service
         envFrom:
         - secretRef:
             name: oracle-secret
