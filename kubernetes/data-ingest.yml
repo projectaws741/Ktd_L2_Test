@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: data-ingest
-        image: projectaws/data-ingest:latest
+        image: projectaws/data_ingest_service
         ports:
         - containerPort: 5000
         envFrom:
