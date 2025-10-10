@@ -2,11 +2,12 @@ version: '3.9'
 
 services:
   oracle-db:
-    image: gvenzl/oracle-xe:21-slim
+    image: gvenzl/oracle-xe:18-slim
     container_name: oracle-db
     environment:
       - ORACLE_PASSWORD=${ORACLE_PASSWORD}
       - APP_USER=${ORACLE_USER}
+      - APP_USER_PASSWORD=${APP_USER_PASSWORD}
     ports:
       - "1521:1521"
     volumes:
@@ -17,7 +18,7 @@ services:
       retries: 10
 
   data_ingest_service:
-    build: ./data_ingest_service
+    image: projectaws/data_ingest_service:latest
     container_name: data_ingest_service
     env_file: .env
     depends_on:
@@ -27,7 +28,7 @@ services:
       - "5001:5000"
 
   data_fetch_service:
-    build: ./data_fetch_service
+    image: projectaws/data_fetch_service:latest
     container_name: data_fetch_service
     env_file: .env
     depends_on:
@@ -38,9 +39,9 @@ services:
     ports:
       - "5002:5000"
 
-  scheduler_service:
-    build: ./scheduler_service
-    container_name: scheduler_service
+  schedule_service:
+    image: projectaws/schedule_service:latest
+    container_name: schedule_service
     env_file: .env
     depends_on:
       - data_ingest_service
