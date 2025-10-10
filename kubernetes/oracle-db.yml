@@ -1,4 +1,16 @@
 apiVersion: v1
+kind: Secret
+metadata:
+  name: oracle-secret
+  namespace: tdk-devops
+type: Opaque
+data:
+  ORACLE_PASSWORD: b3JhY2xl  # base64 for 'oracle'
+  APP_USER: Y3VzdG9tdXNlcg==  # base64 for 'customuser'
+  APP_USER_PASSWORD: c3Ry b25ncGFzcw==  # base64 for 'strongpass'
+
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: oracle-pvc
@@ -7,7 +19,8 @@ spec:
   accessModes: ["ReadWriteOnce"]
   resources:
     requests:
-      storage: 2Gi
+      storage: 20Gi  # increased size as per your EBS changes
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,22 +39,42 @@ spec:
     spec:
       containers:
       - name: oracle-db
-        image: gvenzl/oracle-xe:21-slim
+        image: gvenzl/oracle-xe:18-slim  # using the working version from docker-compose
         env:
         - name: ORACLE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: oracle-secret
               key: ORACLE_PASSWORD
+        - name: APP_USER
+          valueFrom:
+            secretKeyRef:
+              name: oracle-secret
+              key: APP_USER
+        - name: APP_USER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: oracle-secret
+              key: APP_USER_PASSWORD
         ports:
         - containerPort: 1521
         volumeMounts:
         - name: oracle-storage
           mountPath: /opt/oracle/oradata
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - "echo 'SELECT 1 FROM dual;' | sqlplus -s ${APP_USER}/${APP_USER_PASSWORD}@localhost/XEPDB1"
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 5
       volumes:
       - name: oracle-storage
         persistentVolumeClaim:
           claimName: oracle-pvc
+
 ---
 apiVersion: v1
 kind: Service
