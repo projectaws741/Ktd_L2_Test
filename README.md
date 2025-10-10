@@ -69,6 +69,15 @@ scheduler_service
 #docker container ls
 You should see the containers below.
 <img width="1280" height="186" alt="image" src="https://github.com/user-attachments/assets/fe419719-9761-4c62-bd07-fdf26ed88d9b" />
+Step 4: Test the Services Manually
+Insert Data:
+#curl -X POST http://localhost:5001/ingest \
+     -H "Content-Type: application/json" \
+     -d '{"name":"TDK","value":100}'
+Fetch and Export Data:
+#curl http://localhost:5002/fetch
+Check if file was created:
+#cat data/output.tsv
 Verify Automatic Scheduler:
 The scheduler service runs daily at 00:00 AM local time.
 You can check logs to confirm:
