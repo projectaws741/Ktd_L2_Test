@@ -28,7 +28,7 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the source code (adjust path if app.py is in src/)
-COPY src/ /app/
+COPY app.py /app/
 
 # Use ENTRYPOINT to always run app.py with python3
 ENTRYPOINT ["python3", "app.py"]
